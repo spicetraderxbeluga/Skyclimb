@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sky Climb Math</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky-top:#BEE3F5;
+    --sky-mid:#D6EEFA;
+    --sky-bottom:#F3FBFF;
+    --sun:#FFC94D;
+    --sun-dark:#F2A03D;
+    --kite-red:#FF7A6E;
+    --kite-teal:#3DBFAE;
+    --kite-purple:#9B8CF2;
+    --cloud:#FFFFFF;
+    --ink:#1E3A4C;
+    --ink-soft:#4C6A7A;
+    --correct:#43B784;
+    --correct-dark:#2E9B6C;
+    --wrong:#FF8577;
+    --wrong-dark:#E96A5C;
+    --card:#FFFFFF;
+    --rung-off:#DCEFF8;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:'Nunito',sans-serif;
+    color:var(--ink);
+    background:linear-gradient(180deg,var(--sky-top) 0%, var(--sky-mid) 45%, var(--sky-bottom) 100%);
+    overflow-x:hidden;
+    min-height:100vh;
+    position:relative;
+  }
+  h1,h2,h3, .display{font-family:'Fredoka',sans-serif;}
+
+  /* ---- drifting cloud background ---- */
+  .cloud-layer{position:fixed; inset:0; overflow:hidden; z-index:0; pointer-events:none;}
+  .bgcloud{position:absolute; opacity:0.8;}
+  .bgcloud svg{display:block; width:100%; height:100%;}
+  .bgcloud.c1{width:140px; top:8%; left:-160px; animation:drift 46s linear infinite;}
+  .bgcloud.c2{width:100px; top:22%; left:-140px; animation:drift 60s linear infinite; animation-delay:-15s;}
+  .bgcloud.c3{width:170px; top:60%; left:-190px; animation:drift 70s linear infinite; animation-delay:-40s;}
+  .bgcloud.c4{width:90px; top:75%; left:-120px; animation:drift 50s linear infinite; animation-delay:-8s;}
+  @keyframes drift{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(calc(100vw + 220px)); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .bgcloud{ animation:none !important; display:none; }
+  }
+
+  .wrap{position:relative; z-index:1; max-width:520px; margin:0 auto; padding:20px 18px 40px; min-height:100vh; display:flex; flex-direction:column;}
+
+  /* ---- header ---- */
+  header{display:flex; align-items:center; gap:12px; margin-bottom:6px;}
+  .sun{width:44px; height:44px; flex:none;}
+  header h1{font-size:1.5rem; margin:0; letter-spacing:.2px; font-weight:700; color:var(--ink);}
+  header p{margin:2px 0 0; font-size:.85rem; color:var(--ink-soft); font-weight:700;}
+
+  /* ---- start screen ---- */
+  .panel{
+    background:var(--card);
+    border-radius:28px;
+    padding:24px 22px;
+    margin-top:18px;
+    box-shadow:0 18px 40px -18px rgba(30,58,76,0.28);
+  }
+  .panel h2{margin:0 0 4px; font-size:1.25rem;}
+  .panel .sub{margin:0 0 18px; color:var(--ink-soft); font-weight:700; font-size:.92rem;}
+  .choice-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px;}
+  .choice-row.two{grid-template-columns:repeat(3,1fr);}
+  .chip{
+    border:2.5px solid var(--rung-off);
+    background:#fff;
+    border-radius:16px;
+    padding:12px 6px;
+    font-family:'Nunito',sans-serif;
+    font-weight:800;
+    font-size:.88rem;
+    color:var(--ink-soft);
+    cursor:pointer;
+    text-align:center;
+    transition:transform .12s ease, border-color .12s ease, background .12s ease, color .12s ease;
+  }
+  .chip:active{transform:scale(0.96);}
+  .chip.selected{
+    border-color:var(--kite-teal);
+    background:#EAFBF6;
+    color:var(--correct-dark);
+  }
+  label.field-label{display:block; font-weight:800; font-size:.85rem; color:var(--ink); margin-bottom:8px;}
+
+  .go-btn{
+    width:100%;
+    border:none;
+    border-radius:18px;
+    padding:16px;
+    font-family:'Fredoka',sans-serif;
+    font-weight:600;
+    font-size:1.1rem;
+    color:#fff;
+    background:linear-gradient(180deg,var(--kite-teal), var(--correct-dark));
+    cursor:pointer;
+    box-shadow:0 10px 22px -8px rgba(46,155,108,0.55);
+    transition:transform .12s ease;
+  }
+  .go-btn:active{transform:scale(0.97);}
+
+  /* ---- game screen ---- */
+  .game{display:flex; flex-direction:column; flex:1; margin-top:14px;}
+
+  .statbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:0 4px;}
+  .stat{display:flex; flex-direction:column; align-items:center;}
+  .stat .num{font-family:'Fredoka',sans-serif; font-size:1.15rem; font-weight:600; color:var(--ink);}
+  .stat .lbl{font-size:.68rem; font-weight:800; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.4px;}
+  .restart-link{border:none; background:none; color:var(--ink-soft); font-weight:800; font-size:.78rem; cursor:pointer; text-decoration:underline;}
+
+  .field{display:flex; gap:16px; flex:1; align-items:stretch;}
+
+  /* altitude ladder */
+  .ladder{
+    width:52px;
+    flex:none;
+    background:linear-gradient(180deg,#EAF6FB,#FFFFFF);
+    border-radius:20px;
+    display:flex;
+    flex-direction:column-reverse;
+    padding:10px 0;
+    box-shadow:inset 0 0 0 2px #E2F2FA;
+    position:relative;
+  }
+  .rung{flex:1; display:flex; align-items:center; justify-content:center; position:relative;}
+  .rung .count{
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.72rem; font-weight:800; font-family:'Nunito';
+    background:var(--rung-off); color:var(--ink-soft);
+    transition:background .2s ease, color .2s ease, transform .2s ease;
+  }
+  .rung.active .count{ background:var(--kite-teal); color:#fff; transform:scale(1.08);}
+  .kite-marker{
+    position:absolute; left:50%; width:30px; height:30px; transform:translate(-50%,50%);
+    transition:bottom 0.5s cubic-bezier(.34,1.56,.64,1);
+    bottom:0;
+  }
+
+  /* card area */
+  .cardzone{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;}
+
+  .cloud-card{
+    position:relative;
+    width:100%;
+    background:var(--card);
+    border-radius:34px;
+    padding:38px 20px 30px;
+    text-align:center;
+    box-shadow:0 20px 40px -18px rgba(30,58,76,0.3);
+    min-height:150px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition:transform .15s ease;
+  }
+  .cloud-card::before, .cloud-card::after{
+    content:"";
+    position:absolute;
+    background:var(--card);
+    border-radius:50%;
+  }
+  .cloud-card::before{ width:54px; height:54px; top:-22px; left:34px; }
+  .cloud-card::after{ width:70px; height:70px; top:-32px; right:30px; }
+  .op-tag{
+    font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px;
+    color:var(--kite-teal); margin-bottom:6px;
+  }
+  .question{font-family:'Fredoka',sans-serif; font-size:2.4rem; font-weight:600; color:var(--ink);}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px; width:100%;}
+  .opt-btn{
+    border:none;
+    border-radius:18px;
+    padding:18px 8px;
+    font-family:'Fredoka',sans-serif;
+    font-size:1.3rem;
+    font-weight:600;
+    background:#fff;
+    color:var(--ink);
+    box-shadow:0 8px 0 0 var(--rung-off), 0 10px 18px -8px rgba(30,58,76,0.2);
+    cursor:pointer;
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .opt-btn:active{ transform:translateY(4px); box-shadow:0 4px 0 0 var(--rung-off), 0 6px 12px -6px rgba(30,58,76,0.2); }
+  .opt-btn.correct{ background:var(--correct); color:#fff; box-shadow:0 8px 0 0 var(--correct-dark); }
+  .opt-btn.wrong{ background:var(--wrong); color:#fff; box-shadow:0 8px 0 0 var(--wrong-dark); }
+  .opt-btn[disabled]{ cursor:default; }
+
+  .feedback{
+    margin-top:16px;
+    min-height:30px;
+    font-weight:800;
+    font-size:.95rem;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .feedback.correct{ color:var(--correct-dark); }
+  .feedback.wrong{ color:var(--wrong-dark); }
+
+  .streak-badge{
+    display:inline-flex; align-items:center; gap:4px;
+    background:#FFF3DC; color:var(--sun-dark);
+    border-radius:999px; padding:4px 10px; font-size:.78rem; font-weight:800;
+  }
+
+  /* complete screen */
+  .complete{
+    text-align:center; margin-top:40px;
+  }
+  .complete .kite-big{width:120px; margin:0 auto 10px;}
+  .complete h2{font-size:1.6rem; margin-bottom:4px;}
+  .complete p{color:var(--ink-soft); font-weight:700; margin-top:0;}
+
+  /* ---- rank bar ---- */
+  .rankbar{
+    display:flex; align-items:center; gap:12px;
+    background:linear-gradient(135deg,#FFF7E6,#FFFFFF);
+    border-radius:20px; padding:12px 14px; margin-bottom:12px;
+    box-shadow:0 10px 24px -14px rgba(30,58,76,0.25);
+  }
+  .rank-badge{
+    width:44px; height:44px; flex:none; border-radius:50%;
+    background:linear-gradient(180deg,#FFE1A8,var(--sun));
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem;
+    box-shadow:0 4px 0 0 var(--sun-dark);
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .rank-badge.bump{ transform:scale(1.25) rotate(-8deg); }
+  .rank-info{flex:1; min-width:0;}
+  .rank-name{font-family:'Fredoka',sans-serif; font-weight:600; font-size:.95rem; color:var(--ink);}
+  .rank-progress{ height:8px; border-radius:999px; background:var(--rung-off); margin-top:5px; overflow:hidden;}
+  .rank-progress-fill{ height:100%; background:linear-gradient(90deg,var(--kite-teal),var(--correct-dark)); border-radius:999px; width:0%; transition:width .5s ease;}
+  .points-display{ text-align:right; flex:none; }
+  .points-display .num{font-family:'Fredoka',sans-serif; font-size:1.3rem; font-weight:600; color:var(--sun-dark);}
+  .points-display .lbl{display:block; font-size:.62rem; font-weight:800; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.4px;}
+
+  /* ---- rank-up banner ---- */
+  .rankup-banner{
+    position:fixed; top:18px; left:50%;
+    transform:translate(-50%,-140%);
+    background:linear-gradient(135deg,var(--kite-purple),var(--kite-teal));
+    color:#fff; padding:14px 22px; border-radius:18px;
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:1rem;
+    box-shadow:0 14px 30px -10px rgba(30,58,76,0.4);
+    z-index:20; display:flex; align-items:center; gap:10px;
+    transition:transform .5s cubic-bezier(.34,1.56,.64,1);
+    max-width:90vw; text-align:center;
+    pointer-events:none;
+  }
+  .rankup-banner.show{ transform:translate(-50%,0); }
+  .rankup-banner .icon{font-size:1.6rem;}
+
+  /* ---- star burst on correct ---- */
+  .burst-star{
+    position:absolute; font-size:1.1rem; pointer-events:none;
+    animation:burst .7s ease-out forwards;
+    left:50%; top:50%;
+  }
+  @keyframes burst{
+    from{ transform:translate(-50%,-50%) scale(0.4); opacity:1; }
+    to{ transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1); opacity:0; }
+  }
+
+  /* ---- shake on wrong ---- */
+  .shake{ animation:shake .45s ease; }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-8px); }
+    40%{ transform:translateX(7px); }
+    60%{ transform:translateX(-5px); }
+    80%{ transform:translateX(4px); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .burst-star, .shake, .rank-badge.bump{ animation:none !important; }
+  }
+
+  /* ---- complete screen confetti ---- */
+  .confetti-piece{
+    position:absolute; top:-20px; width:8px; height:14px; opacity:0.9;
+    animation:confetti-fall linear forwards;
+  }
+  @keyframes confetti-fall{
+    to{ transform:translateY(320px) rotate(360deg); opacity:0; }
+  }
+
+  /* ---- dancing cloud scene ---- */
+  .cloud-scene{
+    position:relative; height:92px; margin-bottom:6px;
+    display:flex; align-items:flex-end; justify-content:center; gap:14px;
+    overflow:visible;
+  }
+  .scene-cloud{ width:58px; }
+  .scene-cloud svg{ display:block; width:100%; height:auto; }
+
+  /* perfect (10/10): energetic bounce + spin */
+  .cloud-scene.perfect .scene-cloud{ animation:cloud-bounce-big 0.7s ease-in-out infinite; }
+  .cloud-scene.perfect .scene-cloud:nth-child(2){ animation-delay:0.12s; }
+  .cloud-scene.perfect .scene-cloud:nth-child(3){ animation-delay:0.24s; }
+  @keyframes cloud-bounce-big{
+    0%,100%{ transform:translateY(0) rotate(-4deg); }
+    50%{ transform:translateY(-22px) rotate(4deg); }
+  }
+  .rainbow-arc{
+    position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+    width:200px; opacity:0.9;
+  }
+
+  /* great (9/10): gentle happy sway */
+  .cloud-scene.great .scene-cloud{ animation:cloud-sway 1.1s ease-in-out infinite; }
+  .cloud-scene.great .scene-cloud:nth-child(2){ animation-delay:0.15s; }
+  .cloud-scene.great .scene-cloud:nth-child(3){ animation-delay:0.3s; }
+  @keyframes cloud-sway{
+    0%,100%{ transform:translateY(0) rotate(-3deg); }
+    50%{ transform:translateY(-10px) rotate(3deg); }
+  }
+
+  /* keep-going (below 9): calm resting cloud, encouraging not punishing */
+  .cloud-scene.keepgoing .scene-cloud{ animation:cloud-breathe 2.6s ease-in-out infinite; }
+  @keyframes cloud-breathe{
+    0%,100%{ transform:translateY(0) scale(1); }
+    50%{ transform:translateY(-4px) scale(1.02); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cloud-scene .scene-cloud{ animation:none !important; }
+  }
+
+  /* ---- level + session track ---- */
+  .levelbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:0 2px; flex-wrap:wrap; gap:8px;}
+  .level-badge{
+    display:flex; align-items:center; gap:6px;
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:.88rem; color:var(--ink);
+    background:#EAF6FB; border-radius:999px; padding:6px 12px; flex:none;
+  }
+  .level-badge .flag{font-size:1rem;}
+  .session-track{display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;}
+  .session-pip{
+    width:14px; height:14px; border-radius:50%;
+    background:var(--rung-off);
+    display:flex; align-items:center; justify-content:center;
+    font-size:.6rem;
+    transition:background .2s ease, transform .2s ease;
+    flex:none;
+  }
+  .session-pip.current{ transform:scale(1.25); box-shadow:0 0 0 3px #EAF6FB; }
+  .session-pip.correct{ background:var(--correct); }
+  .session-pip.wrong{ background:var(--wrong); }
+
+  /* ---- session complete screen ---- */
+  .session-complete{ text-align:center; margin-top:32px; }
+  .session-complete .badge-big{
+    width:96px; height:96px; margin:0 auto 12px; border-radius:50%;
+    background:linear-gradient(180deg,#FFE1A8,var(--sun));
+    display:flex; align-items:center; justify-content:center; font-size:2.6rem;
+    box-shadow:0 6px 0 0 var(--sun-dark);
+  }
+  .session-complete h2{ font-size:1.4rem; margin-bottom:2px; }
+  .session-complete .sub{ color:var(--ink-soft); font-weight:700; margin-top:0; }
+  .session-stats{
+    display:flex; justify-content:center; gap:22px; margin:20px 0;
+  }
+  .session-stats .stat .num{font-family:'Fredoka',sans-serif; font-size:1.4rem; font-weight:600; color:var(--ink);}
+  .session-stats .stat .lbl{font-size:.68rem; font-weight:800; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.4px;}
+  .secondary-btn{
+    width:100%; border:none; border-radius:18px; padding:14px;
+    font-family:'Fredoka',sans-serif; font-weight:600; font-size:.98rem;
+    color:var(--ink-soft); background:#EAF6FB; cursor:pointer; margin-top:10px;
+  }
+
+  .hidden{display:none !important;}
+
+  footer{ text-align:center; margin-top:auto; padding-top:24px; font-size:.72rem; color:var(--ink-soft); font-weight:700; opacity:.7;}
+</style>
+</head>
+<body>
+
+<div class="cloud-layer">
+  <div class="bgcloud c1">
+    <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="60" cy="60" rx="60" ry="32" fill="#fff"/><ellipse cx="110" cy="45" rx="45" ry="30" fill="#fff"/><ellipse cx="150" cy="65" rx="35" ry="24" fill="#fff"/></svg>
+  </div>
+  <div class="bgcloud c2">
+    <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="60" cy="60" rx="55" ry="28" fill="#fff"/><ellipse cx="115" cy="48" rx="40" ry="26" fill="#fff"/></svg>
+  </div>
+  <div class="bgcloud c3">
+    <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="60" cy="60" rx="60" ry="32" fill="#fff"/><ellipse cx="120" cy="45" rx="50" ry="30" fill="#fff"/><ellipse cx="165" cy="65" rx="30" ry="22" fill="#fff"/></svg>
+  </div>
+  <div class="bgcloud c4">
+    <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="60" cy="60" rx="50" ry="26" fill="#fff"/><ellipse cx="105" cy="50" rx="38" ry="24" fill="#fff"/></svg>
+  </div>
+</div>
+
+<div class="wrap">
+  <header>
+    <svg class="sun" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="24" fill="#FFC94D"/>
+      <g stroke="#F2A03D" stroke-width="6" stroke-linecap="round">
+        <line x1="50" y1="6" x2="50" y2="18"/>
+        <line x1="50" y1="82" x2="50" y2="94"/>
+        <line x1="6" y1="50" x2="18" y2="50"/>
+        <line x1="82" y1="50" x2="94" y2="50"/>
+        <line x1="18" y1="18" x2="26" y2="26"/>
+        <line x1="74" y1="74" x2="82" y2="82"/>
+        <line x1="82" y1="18" x2="74" y2="26"/>
+        <line x1="26" y1="74" x2="18" y2="82"/>
+      </g>
+    </svg>
+    <div>
+      <h1>Sky Climb Math</h1>
+      <p>Times &amp; divide your way to the top</p>
+    </div>
+    <button id="soundToggle" aria-label="Toggle music" style="margin-left:auto; border:none; background:#fff; width:40px; height:40px; border-radius:50%; font-size:1.1rem; box-shadow:0 6px 14px -6px rgba(30,58,76,0.3); flex:none;">🔊</button>
+  </header>
+
+  <div class="rankup-banner" id="rankupBanner">
+    <span class="icon" id="rankupIcon">☁️</span>
+    <span id="rankupText">Rank up!</span>
+  </div>
+
+  <!-- START SCREEN -->
+  <div class="panel" id="startScreen">
+    <h2>Let's fly!</h2>
+    <p class="sub">Pick what to practice</p>
+
+    <p class="sub" id="startRankLine" style="margin-top:-8px; font-weight:800;"></p>
+    <p class="sub" id="startLevelLine" style="margin-top:-14px; font-weight:800;"></p>
+
+    <label class="field-label">Operation</label>
+    <div class="choice-row" id="opChoices">
+      <div class="chip selected" data-op="mul">✖ Multiply</div>
+      <div class="chip" data-op="div">➗ Divide</div>
+      <div class="chip" data-op="both">✖➗ Both</div>
+    </div>
+
+    <label class="field-label">Times tables</label>
+    <div class="choice-row" id="rangeChoices">
+      <div class="chip" data-range="5">2–5</div>
+      <div class="chip selected" data-range="10">2–10</div>
+      <div class="chip" data-range="12">2–12</div>
+    </div>
+
+    <p class="sub hidden" id="resumeNote" style="margin-top:-6px;">Picking up where you left off ⭐</p>
+
+    <button class="go-btn" id="startBtn">Start climbing 🪁</button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div class="game hidden" id="gameScreen">
+    <div class="rankbar">
+      <div class="rank-badge" id="rankBadge">🪁</div>
+      <div class="rank-info">
+        <div class="rank-name" id="rankName">Kite Rookie</div>
+        <div class="rank-progress"><div class="rank-progress-fill" id="rankProgressFill"></div></div>
+      </div>
+      <div class="points-display"><span class="num" id="pointsNum">0</span><span class="lbl">points</span></div>
+    </div>
+
+    <div class="levelbar">
+      <div class="level-badge"><span class="flag">🚩</span><span id="levelNum">Level 1</span></div>
+      <div class="session-track" id="sessionTrack"></div>
+    </div>
+
+    <div class="statbar">
+      <div class="stat"><span class="num" id="masteredNum">0</span><span class="lbl">Mastered</span></div>
+      <div class="stat"><span class="num" id="totalNum">0</span><span class="lbl">Total facts</span></div>
+      <div class="stat"><span class="num" id="streakNum">0</span><span class="lbl">Streak</span></div>
+      <button class="restart-link" id="restartLink">Change settings</button>
+    </div>
+
+    <div class="field">
+      <div class="ladder" id="ladder">
+        <div class="kite-marker" id="kiteMarker">
+          <svg viewBox="0 0 40 46" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="20,0 38,20 20,40 2,20" fill="#FF7A6E"/>
+            <line x1="20" y1="40" x2="20" y2="46" stroke="#E96A5C" stroke-width="2"/>
+          </svg>
+        </div>
+        <!-- rungs injected by JS -->
+      </div>
+
+      <div class="cardzone">
+        <div class="cloud-card" id="cardEl">
+          <div class="op-tag" id="opTag">Multiply</div>
+          <div class="question" id="questionEl">7 × 6 = ?</div>
+        </div>
+        <div class="options" id="optionsEl"></div>
+        <div class="feedback" id="feedbackEl"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSION COMPLETE SCREEN -->
+  <div class="panel session-complete hidden" id="sessionCompleteScreen">
+    <div class="cloud-scene" id="cloudScene"></div>
+    <div class="badge-big" id="sessionBadge">🚩</div>
+    <h2 id="sessionCompleteTitle">Level 1 complete!</h2>
+    <p class="sub" id="sessionCompleteSub">Nice climbing.</p>
+    <div class="session-stats">
+      <div class="stat"><span class="num" id="sessionCorrectNum">0/10</span><span class="lbl">Correct</span></div>
+      <div class="stat"><span class="num" id="sessionPointsNum">0</span><span class="lbl">Points earned</span></div>
+    </div>
+    <button class="go-btn" id="nextLevelBtn">Start Level 2 🪁</button>
+    <button class="secondary-btn" id="sessionDoneBtn">Take a break</button>
+  </div>
+
+  <!-- COMPLETE SCREEN -->
+  <div class="complete hidden" id="completeScreen" style="position:relative; overflow:hidden;">
+    <div id="confettiLayer" style="position:absolute; inset:0; pointer-events:none;"></div>
+    <svg class="kite-big" viewBox="0 0 100 116" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="50,0 95,50 50,100 5,50" fill="#FFC94D"/>
+      <line x1="50" y1="100" x2="50" y2="116" stroke="#F2A03D" stroke-width="3"/>
+    </svg>
+    <h2>You reached the top! 🎉</h2>
+    <p id="completeMsg">Every fact is mastered.</p>
+    <button class="go-btn" id="playAgainBtn" style="margin-top:16px;">Play again</button>
+  </div>
+
+  <footer>Made for practicing multiplication &amp; division facts</footer>
+</div>
+
+<script>
+(function(){
+  var state = {
+    op: 'mul',
+    range: 10,
+    cards: [],
+    currentIndex: -1,
+    streak: 0,
+    lastCardId: null,
+    points: 0,
+    level: 1,
+    sessionCount: 0,
+    sessionCorrect: 0,
+    sessionPoints: 0
+  };
+
+  var STORAGE_KEY = 'skyClimbMath_progress_v1';
+  var POINTS_KEY = 'skyClimbMath_points_v1';
+  var LEVEL_KEY = 'skyClimbMath_level_v1';
+  var SOUND_KEY = 'skyClimbMath_sound_v1';
+  var SESSION_LENGTH = 10;
+
+  // Works inside Claude's artifact preview (window.storage) and as a
+  // standalone file opened in Safari (falls back to localStorage).
+  async function kvGet(key){
+    if(window.storage && typeof window.storage.get === 'function'){
+      try{
+        var res = await window.storage.get(key, false);
+        return res ? res.value : null;
+      }catch(e){ return null; } // key not found yet, or storage unavailable
+    }
+    try{ return localStorage.getItem(key); }catch(e){ return null; }
+  }
+  async function kvSet(key, value){
+    if(window.storage && typeof window.storage.set === 'function'){
+      try{ await window.storage.set(key, value, false); return; }catch(e){ return; }
+    }
+    try{ localStorage.setItem(key, value); }catch(e){}
+  }
+  async function kvDelete(key){
+    if(window.storage && typeof window.storage.delete === 'function'){
+      try{ await window.storage.delete(key, false); return; }catch(e){ return; }
+    }
+    try{ localStorage.removeItem(key); }catch(e){}
+  }
+
+  async function loadLevel(){
+    var raw = await kvGet(LEVEL_KEY);
+    return parseInt(raw,10) || 1;
+  }
+  async function saveLevel(){
+    await kvSet(LEVEL_KEY, String(state.level));
+  }
+
+  var RANKS = [
+    { name:'Kite Rookie',    min:0,     icon:'🪁' },
+    { name:'Breeze Rider',   min:250,   icon:'🌬️' },
+    { name:'Cloud Hopper',   min:700,   icon:'☁️' },
+    { name:'Sky Sailor',     min:1500,  icon:'⛵' },
+    { name:'Wind Racer',     min:2800,  icon:'🌪️' },
+    { name:'Storm Chaser',   min:4500,  icon:'⚡' },
+    { name:'Star Navigator', min:7000,  icon:'🌟' },
+    { name:'Sky Champion',   min:10000, icon:'🏆' }
+  ];
+
+  function rankIndexFor(points){
+    var idx = 0;
+    for(var i=0;i<RANKS.length;i++){ if(points >= RANKS[i].min) idx = i; }
+    return idx;
+  }
+
+  // ---- tiny chiptune audio engine (original synthesized 8-bit style tones) ----
+  var audioCtx = null, masterGain = null, musicGain = null, sfxGain = null;
+  var musicOn = true, musicStarted = false, musicIndex = 0, musicTimer = null;
+
+  function ensureAudio(){
+    if(audioCtx) return audioCtx;
+    try{
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 1;
+      masterGain.connect(audioCtx.destination);
+      musicGain = audioCtx.createGain();
+      musicGain.gain.value = musicOn ? 0.05 : 0;
+      musicGain.connect(masterGain);
+      sfxGain = audioCtx.createGain();
+      sfxGain.gain.value = musicOn ? 0.15 : 0;
+      sfxGain.connect(masterGain);
+    }catch(e){ audioCtx = null; }
+    return audioCtx;
+  }
+
+  function playTone(freq, when, dur, type, destGain, peak){
+    if(!audioCtx) return;
+    var osc = audioCtx.createOscillator();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    var env = audioCtx.createGain();
+    env.gain.setValueAtTime(0.0001, when);
+    env.gain.linearRampToValueAtTime(peak || 0.2, when + 0.02);
+    env.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    osc.connect(env);
+    env.connect(destGain);
+    osc.start(when);
+    osc.stop(when + dur + 0.03);
+  }
+
+  function playSfx(notes, type, peak){
+    var ctx = ensureAudio();
+    if(!ctx || !musicOn) return;
+    var t = ctx.currentTime;
+    notes.forEach(function(n){ playTone(n.f, t + n.t, n.d, type, sfxGain, peak); });
+  }
+
+  function sfxCorrect(){ playSfx([{f:660,t:0,d:0.09},{f:880,t:0.07,d:0.14}], 'square', 0.18); }
+  function sfxWrong(){ playSfx([{f:220,t:0,d:0.16},{f:175,t:0.1,d:0.22}], 'triangle', 0.14); }
+  function sfxRankUp(){ playSfx([{f:523,t:0,d:0.1},{f:659,t:0.09,d:0.1},{f:784,t:0.18,d:0.1},{f:1046,t:0.28,d:0.32}], 'square', 0.2); }
+  function sfxLevelPerfect(){ playSfx([{f:523,t:0,d:0.12},{f:659,t:0.1,d:0.12},{f:784,t:0.2,d:0.12},{f:1046,t:0.3,d:0.12},{f:1318,t:0.42,d:0.4}], 'square', 0.22); }
+  function sfxLevelGreat(){ playSfx([{f:523,t:0,d:0.14},{f:659,t:0.12,d:0.14},{f:784,t:0.24,d:0.3}], 'square', 0.2); }
+  function sfxLevelKeepGoing(){ playSfx([{f:392,t:0,d:0.18},{f:440,t:0.16,d:0.26}], 'triangle', 0.15); }
+  function sfxFullMastery(){ playSfx([{f:523,t:0,d:0.12},{f:659,t:0.11,d:0.12},{f:784,t:0.22,d:0.12},{f:1046,t:0.33,d:0.12},{f:784,t:0.45,d:0.12},{f:1318,t:0.56,d:0.5}], 'square', 0.22); }
+
+  // simple original 8-note happy loop, plays softly in the background
+  var musicNotes = [
+    {f:523,d:0.26},{f:659,d:0.26},{f:784,d:0.26},{f:659,d:0.26},
+    {f:587,d:0.26},{f:698,d:0.26},{f:880,d:0.26},{f:698,d:0.52}
+  ];
+  function scheduleNextMusicNote(){
+    if(!audioCtx) return;
+    var note = musicNotes[musicIndex % musicNotes.length];
+    playTone(note.f, audioCtx.currentTime + 0.02, note.d * 0.85, 'square', musicGain, 0.045);
+    musicIndex++;
+    musicTimer = setTimeout(scheduleNextMusicNote, note.d * 1000);
+  }
+  function startMusic(){
+    if(musicStarted) return;
+    var ctx = ensureAudio();
+    if(!ctx) return;
+    if(ctx.state === 'suspended') ctx.resume();
+    musicStarted = true;
+    scheduleNextMusicNote();
+  }
+  function unlockAudioOnce(){
+    if(musicOn) startMusic();
+    document.removeEventListener('click', unlockAudioOnce);
+    document.removeEventListener('touchstart', unlockAudioOnce);
+  }
+  document.addEventListener('click', unlockAudioOnce, {once:true});
+  document.addEventListener('touchstart', unlockAudioOnce, {once:true});
+
+  document.getElementById('soundToggle').addEventListener('click', function(){
+    musicOn = !musicOn;
+    this.textContent = musicOn ? '🔊' : '🔈';
+    if(musicGain) musicGain.gain.value = musicOn ? 0.05 : 0;
+    if(sfxGain) sfxGain.gain.value = musicOn ? 0.15 : 0;
+    kvSet(SOUND_KEY, musicOn ? '1' : '0');
+    if(musicOn) startMusic();
+  });
+
+  async function loadPoints(){
+    var raw = await kvGet(POINTS_KEY);
+    return parseInt(raw,10) || 0;
+  }
+  async function savePoints(){
+    await kvSet(POINTS_KEY, String(state.points));
+  }
+
+  async function saveProgress(){
+    var snapshot = { op: state.op, range: state.range, cards: state.cards, streak: state.streak };
+    await kvSet(STORAGE_KEY, JSON.stringify(snapshot));
+    savedProgress = snapshot;
+  }
+
+  async function loadProgress(){
+    var raw = await kvGet(STORAGE_KEY);
+    try{ return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+  }
+
+  async function clearProgress(){
+    await kvDelete(STORAGE_KEY);
+  }
+
+  var savedProgress = null;
+
+  function refreshResumeUI(){
+    var rankIdx = rankIndexFor(state.points);
+    var rankLine = document.getElementById('startRankLine');
+    rankLine.textContent = RANKS[rankIdx].icon + ' ' + RANKS[rankIdx].name + ' — ' + state.points + ' pts';
+    document.getElementById('startLevelLine').textContent = '🚩 Level ' + state.level + ' — ' + SESSION_LENGTH + ' questions';
+
+    var note = document.getElementById('resumeNote');
+    var btn = document.getElementById('startBtn');
+    var matches = savedProgress && savedProgress.op === state.op && savedProgress.range === state.range
+      && savedProgress.cards && savedProgress.cards.length > 0;
+    if(matches){
+      var mastered = savedProgress.cards.filter(c => c.bucket === 5).length;
+      note.textContent = 'Continue where you left off — ' + mastered + '/' + savedProgress.cards.length + ' mastered';
+      note.classList.remove('hidden');
+      btn.textContent = 'Play Level ' + state.level + ' 🪁';
+    } else {
+      note.classList.add('hidden');
+      btn.textContent = 'Play Level ' + state.level + ' 🪁';
+    }
+  }
+
+  // ---- start screen interactions ----
+  document.getElementById('opChoices').addEventListener('click', function(e){
+    var chip = e.target.closest('.chip');
+    if(!chip) return;
+    Array.from(this.children).forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    state.op = chip.dataset.op;
+    refreshResumeUI();
+  });
+  document.getElementById('rangeChoices').addEventListener('click', function(e){
+    var chip = e.target.closest('.chip');
+    if(!chip) return;
+    Array.from(this.children).forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    state.range = parseInt(chip.dataset.range,10);
+    refreshResumeUI();
+  });
+
+  async function init(){
+    savedProgress = await loadProgress();
+    state.points = await loadPoints();
+    state.level = await loadLevel();
+    var soundPref = await kvGet(SOUND_KEY);
+    musicOn = soundPref === null ? true : soundPref === '1';
+    document.getElementById('soundToggle').textContent = musicOn ? '🔊' : '🔈';
+
+    if(savedProgress && savedProgress.op && savedProgress.range){
+      state.op = savedProgress.op;
+      state.range = savedProgress.range;
+      document.querySelectorAll('#opChoices .chip').forEach(function(c){
+        c.classList.toggle('selected', c.dataset.op === state.op);
+      });
+      document.querySelectorAll('#rangeChoices .chip').forEach(function(c){
+        c.classList.toggle('selected', parseInt(c.dataset.range,10) === state.range);
+      });
+    }
+    refreshResumeUI();
+  }
+  init();
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('restartLink').addEventListener('click', function(){
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('completeScreen').classList.add('hidden');
+    document.getElementById('sessionCompleteScreen').classList.add('hidden');
+    document.getElementById('startScreen').classList.remove('hidden');
+    refreshResumeUI();
+  });
+  document.getElementById('playAgainBtn').addEventListener('click', function(){
+    document.getElementById('completeScreen').classList.add('hidden');
+    document.getElementById('startScreen').classList.remove('hidden');
+    refreshResumeUI();
+  });
+  document.getElementById('nextLevelBtn').addEventListener('click', function(){
+    document.getElementById('sessionCompleteScreen').classList.add('hidden');
+    startSession();
+  });
+  document.getElementById('sessionDoneBtn').addEventListener('click', function(){
+    document.getElementById('sessionCompleteScreen').classList.add('hidden');
+    document.getElementById('startScreen').classList.remove('hidden');
+    refreshResumeUI();
+  });
+
+  function buildCards(){
+    var cards = [];
+    var max = state.range;
+    var id = 0;
+    for(var a=2; a<=max; a++){
+      for(var b=2; b<=max; b++){
+        if(b < a) continue; // avoid duplicate commutative pairs for multiplication
+        if(state.op === 'mul' || state.op === 'both'){
+          cards.push({
+            id: 'm'+id++, op:'mul', a:a, b:b,
+            question: a+' × '+b, answer: a*b, bucket:1
+          });
+        }
+        if(state.op === 'div' || state.op === 'both'){
+          var product = a*b;
+          cards.push({
+            id: 'd'+id++, op:'div', a:product, b:b,
+            question: product+' ÷ '+b, answer: a, bucket:1
+          });
+          if(a !== b){
+            cards.push({
+              id: 'd'+id++, op:'div', a:product, b:a,
+              question: product+' ÷ '+a, answer: b, bucket:1
+            });
+          }
+        }
+      }
+    }
+    // shuffle
+    for(var i=cards.length-1;i>0;i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var tmp = cards[i]; cards[i]=cards[j]; cards[j]=tmp;
+    }
+    return cards;
+  }
+
+  function startGame(){
+    var matches = savedProgress && savedProgress.op === state.op && savedProgress.range === state.range
+      && savedProgress.cards && savedProgress.cards.length > 0;
+    if(matches){
+      state.cards = savedProgress.cards;
+      state.streak = savedProgress.streak || 0;
+    } else {
+      state.cards = buildCards();
+      state.streak = 0;
+    }
+    startSession();
+  }
+
+  function startSession(){
+    state.sessionCount = 0;
+    state.sessionCorrect = 0;
+    state.sessionPoints = 0;
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('completeScreen').classList.add('hidden');
+    document.getElementById('sessionCompleteScreen').classList.add('hidden');
+    document.getElementById('gameScreen').classList.remove('hidden');
+    document.getElementById('levelNum').textContent = 'Level ' + state.level;
+    buildLadder();
+    buildSessionTrack();
+    updateStats();
+    saveProgress();
+    if(!allMastered()) nextCard();
+  }
+
+  function buildSessionTrack(){
+    var track = document.getElementById('sessionTrack');
+    track.innerHTML = '';
+    for(var i=0;i<SESSION_LENGTH;i++){
+      var pip = document.createElement('div');
+      pip.className = 'session-pip';
+      track.appendChild(pip);
+    }
+    updateSessionTrack();
+  }
+
+  function updateSessionTrack(){
+    var pips = document.querySelectorAll('.session-pip');
+    pips.forEach(function(p, i){
+      p.classList.remove('current','correct','wrong');
+      if(i === state.sessionCount) p.classList.add('current');
+    });
+  }
+
+  function buildLadder(){
+    var ladder = document.getElementById('ladder');
+    // remove old rungs (keep kite marker)
+    Array.from(ladder.querySelectorAll('.rung')).forEach(r => r.remove());
+    for(var lvl=1; lvl<=5; lvl++){
+      var rung = document.createElement('div');
+      rung.className = 'rung';
+      rung.dataset.level = lvl;
+      var count = document.createElement('div');
+      count.className = 'count';
+      count.textContent = '0';
+      rung.appendChild(count);
+      ladder.appendChild(rung);
+    }
+  }
+
+  function updateStats(){
+    var total = state.cards.length;
+    var mastered = state.cards.filter(c => c.bucket === 5).length;
+    document.getElementById('masteredNum').textContent = mastered;
+    document.getElementById('totalNum').textContent = total;
+    document.getElementById('streakNum').textContent = state.streak;
+    updateRankUI();
+
+    var counts = [0,0,0,0,0];
+    state.cards.forEach(c => counts[c.bucket-1]++);
+    var rungs = document.querySelectorAll('.rung');
+    rungs.forEach(function(r){
+      var lvl = parseInt(r.dataset.level,10);
+      var c = counts[lvl-1];
+      r.querySelector('.count').textContent = c;
+      r.classList.toggle('active', c > 0);
+    });
+
+    // kite altitude: percentage mastered maps to ladder height
+    var pct = total ? mastered/total : 0;
+    var kite = document.getElementById('kiteMarker');
+    var ladderHeight = document.getElementById('ladder').clientHeight;
+    var travel = Math.max(0, ladderHeight - 40);
+    kite.style.bottom = (pct * travel) + 'px';
+
+    if(total > 0 && mastered === total){
+      showComplete();
+    }
+  }
+
+  function updateRankUI(){
+    var idx = rankIndexFor(state.points);
+    var rank = RANKS[idx];
+    var next = RANKS[idx+1];
+    document.getElementById('pointsNum').textContent = state.points;
+    document.getElementById('rankBadge').textContent = rank.icon;
+    document.getElementById('rankName').textContent = rank.name;
+    var fill = document.getElementById('rankProgressFill');
+    if(next){
+      var pct = (state.points - rank.min) / (next.min - rank.min);
+      fill.style.width = Math.max(4, Math.min(100, pct*100)) + '%';
+    } else {
+      fill.style.width = '100%';
+    }
+  }
+
+  function showRankUp(rank){
+    sfxRankUp();
+    var banner = document.getElementById('rankupBanner');
+    document.getElementById('rankupIcon').textContent = rank.icon;
+    document.getElementById('rankupText').textContent = 'Rank up! You\'re now a ' + rank.name;
+    banner.classList.add('show');
+    var badge = document.getElementById('rankBadge');
+    badge.classList.add('bump');
+    setTimeout(function(){ badge.classList.remove('bump'); }, 400);
+    setTimeout(function(){ banner.classList.remove('show'); }, 2400);
+  }
+
+  function spawnBurst(container){
+    var stars = ['⭐','✨','🌟'];
+    for(var i=0;i<6;i++){
+      var el = document.createElement('span');
+      el.className = 'burst-star';
+      el.textContent = stars[Math.floor(Math.random()*stars.length)];
+      var angle = (Math.PI*2/6)*i + (Math.random()*0.5);
+      var dist = 60 + Math.random()*30;
+      el.style.setProperty('--dx', (Math.cos(angle)*dist)+'px');
+      el.style.setProperty('--dy', (Math.sin(angle)*dist)+'px');
+      container.appendChild(el);
+      (function(node){ setTimeout(function(){ node.remove(); }, 750); })(el);
+    }
+  }
+
+  function spawnConfetti(){
+    var layer = document.getElementById('confettiLayer');
+    var colors = ['#FF7A6E','#3DBFAE','#9B8CF2','#FFC94D','#43B784'];
+    for(var i=0;i<28;i++){
+      var el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = (Math.random()*100) + '%';
+      el.style.background = colors[Math.floor(Math.random()*colors.length)];
+      el.style.animationDuration = (1.4 + Math.random()*1.2) + 's';
+      el.style.animationDelay = (Math.random()*0.6) + 's';
+      layer.appendChild(el);
+    }
+    setTimeout(function(){ layer.innerHTML = ''; }, 3200);
+  }
+
+  function weightForBucket(b){
+    return [0,5,4,3,2,1][b]; // bucket1->5 ... bucket5->1
+  }
+
+  function pickNextCard(){
+    var pool = state.cards.filter(c => c.bucket < 5 || state.cards.every(x => x.bucket === 5));
+    if(pool.length === 0) pool = state.cards;
+    // build weighted list, avoid immediate repeat if possible
+    var candidates = pool.filter(c => c.id !== state.lastCardId);
+    if(candidates.length === 0) candidates = pool;
+    var weights = candidates.map(c => weightForBucket(c.bucket));
+    var totalWeight = weights.reduce((a,b)=>a+b,0);
+    var r = Math.random() * totalWeight;
+    var acc = 0;
+    for(var i=0;i<candidates.length;i++){
+      acc += weights[i];
+      if(r <= acc) return candidates[i];
+    }
+    return candidates[candidates.length-1];
+  }
+
+  function makeDistractors(card){
+    var answer = card.answer;
+    var pool = new Set();
+    var b = card.b;
+    var offsets = [answer - b, answer + b, answer - 1, answer + 1, answer - 2, answer + 2, answer + (card.a||1)];
+    offsets.forEach(function(v){
+      if(v > 0 && v !== answer) pool.add(v);
+    });
+    var arr = Array.from(pool);
+    // shuffle
+    for(var i=arr.length-1;i>0;i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var tmp = arr[i]; arr[i]=arr[j]; arr[j]=tmp;
+    }
+    var picks = arr.slice(0,3);
+    while(picks.length < 3){
+      var v = answer + Math.floor(Math.random()*10) - 5;
+      if(v > 0 && v !== answer && picks.indexOf(v) === -1) picks.push(v);
+    }
+    return picks;
+  }
+
+  function nextCard(){
+    var card = pickNextCard();
+    state.lastCardId = card.id;
+    state.currentIndex = state.cards.indexOf(card);
+
+    document.getElementById('opTag').textContent = card.op === 'mul' ? 'Multiply' : 'Divide';
+    document.getElementById('questionEl').textContent = card.question + ' = ?';
+    document.getElementById('feedbackEl').textContent = '';
+    document.getElementById('feedbackEl').className = 'feedback';
+
+    var options = makeDistractors(card);
+    options.push(card.answer);
+    for(var i=options.length-1;i>0;i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var tmp = options[i]; options[i]=options[j]; options[j]=tmp;
+    }
+
+    var optionsEl = document.getElementById('optionsEl');
+    optionsEl.innerHTML = '';
+    options.forEach(function(opt){
+      var btn = document.createElement('button');
+      btn.className = 'opt-btn';
+      btn.textContent = opt;
+      btn.addEventListener('click', function(){ handleAnswer(card, opt, btn, optionsEl); });
+      optionsEl.appendChild(btn);
+    });
+  }
+
+  function handleAnswer(card, chosen, btnEl, optionsEl){
+    Array.from(optionsEl.children).forEach(b => b.disabled = true);
+    var feedback = document.getElementById('feedbackEl');
+    var correct = chosen === card.answer;
+    var cardEl = document.getElementById('cardEl');
+    var prevRankIdx = rankIndexFor(state.points);
+    var gain = 0;
+
+    if(correct){
+      card.bucket = Math.min(5, card.bucket + 1);
+      state.streak += 1;
+      gain = card.bucket * 10 + Math.min(state.streak * 2, 40);
+      state.points += gain;
+      btnEl.classList.add('correct');
+      feedback.className = 'feedback correct';
+      feedback.innerHTML = pickPraise() + ' <span class="streak-badge">+' + gain + ' pts</span>' +
+        (state.streak > 1 ? ' <span class="streak-badge">🔥 '+state.streak+' streak</span>' : '');
+      spawnBurst(cardEl);
+      sfxCorrect();
+    } else {
+      card.bucket = 1;
+      state.streak = 0;
+      btnEl.classList.add('wrong');
+      Array.from(optionsEl.children).forEach(function(b){
+        if(parseInt(b.textContent,10) === card.answer) b.classList.add('correct');
+      });
+      feedback.className = 'feedback wrong';
+      feedback.textContent = 'Not quite — answer is ' + card.answer + '. Let\'s try it again soon!';
+      cardEl.classList.add('shake');
+      setTimeout(function(){ cardEl.classList.remove('shake'); }, 500);
+      sfxWrong();
+    }
+
+    if(correct) state.sessionCorrect += 1;
+    state.sessionPoints += gain;
+
+    var pips = document.querySelectorAll('.session-pip');
+    if(pips[state.sessionCount]){
+      pips[state.sessionCount].classList.remove('current');
+      pips[state.sessionCount].classList.add(correct ? 'correct' : 'wrong');
+    }
+    state.sessionCount += 1;
+    if(pips[state.sessionCount]) pips[state.sessionCount].classList.add('current');
+
+    updateStats();
+    saveProgress();
+    savePoints();
+
+    var newRankIdx = rankIndexFor(state.points);
+    if(newRankIdx > prevRankIdx){
+      showRankUp(RANKS[newRankIdx]);
+    }
+
+    var finishedByMastery = allMastered();
+    var finishedBySession = state.sessionCount >= SESSION_LENGTH;
+
+    setTimeout(function(){
+      if(finishedByMastery){
+        return; // showComplete() already fired from updateStats
+      }
+      if(finishedBySession){
+        showSessionComplete();
+      } else {
+        nextCard();
+      }
+    }, correct ? 750 : 1400);
+  }
+
+  function showSessionComplete(){
+    state.level += 1;
+    saveLevel();
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('sessionCompleteScreen').classList.remove('hidden');
+    document.getElementById('sessionCorrectNum').textContent = state.sessionCorrect + '/' + SESSION_LENGTH;
+    document.getElementById('sessionPointsNum').textContent = state.sessionPoints;
+    document.getElementById('nextLevelBtn').textContent = 'Start Level ' + state.level + ' 🪁';
+
+    var score = state.sessionCorrect;
+    var tier, title, sub, badge;
+    if(score === SESSION_LENGTH){
+      tier = 'perfect';
+      title = 'Perfect round! 🎉';
+      sub = 'Every single question landed. Incredible!';
+      badge = '🏆';
+      sfxLevelPerfect();
+    } else if(score >= 9){
+      tier = 'great';
+      title = 'Great flying! 🎈';
+      sub = 'So close to perfect — awesome round.';
+      badge = '⭐';
+      sfxLevelGreat();
+    } else {
+      tier = 'keepgoing';
+      title = 'Level ' + (state.level - 1) + ' complete!';
+      sub = 'Nice climbing — every round makes the next one easier.';
+      badge = '🚩';
+      sfxLevelKeepGoing();
+    }
+    document.getElementById('sessionCompleteTitle').textContent = title;
+    document.getElementById('sessionCompleteSub').textContent = sub;
+    document.getElementById('sessionBadge').textContent = badge;
+
+    buildCloudScene(tier);
+    if(tier !== 'keepgoing') spawnConfetti();
+  }
+
+  var cloudFaceSVG =
+    '<svg viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">' +
+    '<ellipse cx="35" cy="45" rx="35" ry="22" fill="#fff"/>' +
+    '<ellipse cx="65" cy="35" rx="28" ry="20" fill="#fff"/>' +
+    '<circle cx="45" cy="42" r="4" fill="#1E3A4C"/>' +
+    '<circle cx="65" cy="38" r="4" fill="#1E3A4C"/>' +
+    '<path d="M45 52 Q55 60 65 50" stroke="#1E3A4C" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+    '</svg>';
+
+  function buildCloudScene(tier){
+    var scene = document.getElementById('cloudScene');
+    scene.className = 'cloud-scene ' + tier;
+    scene.innerHTML = '';
+    if(tier === 'perfect'){
+      var rainbow = document.createElement('div');
+      rainbow.className = 'rainbow-arc';
+      rainbow.innerHTML = '<svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M10 100 A90 90 0 0 1 190 100" stroke="#FF7A6E" stroke-width="8" fill="none"/>' +
+        '<path d="M25 100 A75 75 0 0 1 175 100" stroke="#FFC94D" stroke-width="8" fill="none"/>' +
+        '<path d="M40 100 A60 60 0 0 1 160 100" stroke="#3DBFAE" stroke-width="8" fill="none"/>' +
+        '<path d="M55 100 A45 45 0 0 1 145 100" stroke="#9B8CF2" stroke-width="8" fill="none"/>' +
+        '</svg>';
+      scene.appendChild(rainbow);
+    }
+    var count = tier === 'perfect' ? 3 : (tier === 'great' ? 3 : 1);
+    for(var i=0;i<count;i++){
+      var el = document.createElement('div');
+      el.className = 'scene-cloud';
+      el.innerHTML = cloudFaceSVG;
+      scene.appendChild(el);
+    }
+  }
+
+  function allMastered(){
+    return state.cards.length > 0 && state.cards.every(c => c.bucket === 5);
+  }
+
+  function pickPraise(){
+    var msgs = ['Nice! ⭐','Great job! 🌤️','You got it! 🪁','Awesome! ☀️','Soaring! 🎈'];
+    return msgs[Math.floor(Math.random()*msgs.length)];
+  }
+
+  function showComplete(){
+    clearProgress();
+    savedProgress = null;
+    document.getElementById('gameScreen').classList.add('hidden');
+    document.getElementById('completeScreen').classList.remove('hidden');
+    document.getElementById('completeMsg').textContent =
+      'All ' + state.cards.length + ' facts made it to the top bucket. Amazing work!';
+    spawnConfetti();
+    sfxFullMastery();
+  }
+})();
+</script>
+</body>
+</html>
